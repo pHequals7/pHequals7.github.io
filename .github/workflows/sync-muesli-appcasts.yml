@@ -1,0 +1,33 @@
+name: Sync Muesli appcasts
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch canonical appcasts
+        run: |
+          set -euo pipefail
+          mkdir -p muesli
+          curl -fsSL https://muesli-hq.github.io/muesli/appcast.xml -o muesli/appcast.xml
+          curl -fsSL https://muesli-hq.github.io/muesli/appcast-preprod.xml -o muesli/appcast-preprod.xml
+      - name: Commit changes
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- muesli/appcast.xml muesli/appcast-preprod.xml; then
+            echo "Appcasts already up to date."
+            exit 0
+          fi
+          git add muesli/appcast.xml muesli/appcast-preprod.xml
+          git commit -m "Sync Muesli appcasts"
+          git push
